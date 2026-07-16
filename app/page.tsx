@@ -20,7 +20,6 @@ import {
   ChevronDown,
   Smartphone,
   Shirt,
-  TreePine,
   Home,
   ShoppingCartIcon,
   Sun,
@@ -31,7 +30,11 @@ import {
   Users,
   Store,
   Tag,
-  ArrowRight
+  ArrowRight,
+  Baby,
+  Book,
+  Dumbbell,
+  Wrench
 } from 'lucide-react'
 
 // Malawi-inspired color palette
@@ -45,21 +48,9 @@ const colors = {
   lightGreen: '#e8f5e8'    // Very light green
 }
 
-// Categories
-const categories = [
-  { name: 'All Categories', icon: Store, color: 'bg-gray-100 text-gray-600' },
-  { name: 'Electronics', icon: Smartphone, color: 'bg-blue-100 text-blue-600' },
-  { name: 'Fashion & Apparel', icon: Shirt, color: 'bg-pink-100 text-pink-600' },
-  { name: 'Chitenje & Traditional Fabrics', icon: TreePine, color: 'bg-green-100 text-green-600' },
-  { name: 'Food & Beverages', icon: Home, color: 'bg-orange-100 text-orange-600' },
-  { name: 'Health & Beauty', icon: Heart, color: 'bg-red-100 text-red-600' },
-  { name: 'Agriculture & Farming', icon: TreePine, color: 'bg-green-100 text-green-600' },
-  { name: 'Home & Furniture', icon: Home, color: 'bg-orange-100 text-orange-600' },
-  { name: 'Groceries', icon: ShoppingCartIcon, color: 'bg-red-100 text-red-600' },
-  { name: 'Solar & Energy', icon: Sun, color: 'bg-yellow-100 text-yellow-600' },
-  { name: 'Motor & Spare Parts', icon: Car, color: 'bg-gray-100 text-gray-600' },
-  { name: 'Beauty & Personal Care', icon: Heart, color: 'bg-purple-100 text-purple-600' }
-]
+import { UNIFIED_CATEGORIES } from '@/lib/categories'
+
+const categories = UNIFIED_CATEGORIES
 
 interface Product {
   id: string
@@ -100,6 +91,8 @@ export default function MalawiMarketplaceLanding() {
   const [loading, setLoading] = useState(true)
   const [newProductsLoading, setNewProductsLoading] = useState(true)
   const [promotionsLoading, setPromotionsLoading] = useState(true)
+  const [banners, setBanners] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const fetchProducts = async () => {
     try {
@@ -146,7 +139,22 @@ export default function MalawiMarketplaceLanding() {
     }
   }
 
+  const fetchBanners = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/admin/banners')
+      const data = await response.json()
+      setBanners(data.banners || [])
+    } catch (error) {
+      console.error('Failed to fetch banners:', error)
+      setBanners([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
+    fetchBanners()
     fetchProducts()
     fetchNewProducts()
     fetchPromotions()
@@ -188,7 +196,7 @@ export default function MalawiMarketplaceLanding() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation - Tambala Market Style */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <nav className="bg-red-600 border-b border-red-700 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -197,21 +205,21 @@ export default function MalawiMarketplaceLanding() {
                 <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center mr-2">
                   <span className="text-white font-bold text-sm">M</span>
                 </div>
-                <span className="text-xl font-bold text-gray-900">Msika247</span>
+                <span className="text-xl font-bold text-white">Msika247</span>
               </Link>
             </div>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="/auctions" className="text-gray-700 hover:text-green-600 font-medium">
+              <Link href="/auctions" className="text-white hover:text-red-100 font-medium">
                 Auctions
               </Link>
-              <Link href="/news" className="text-gray-700 hover:text-green-600 font-medium">
+              <Link href="/news" className="text-white hover:text-red-100 font-medium">
                 News
               </Link>
               <div className="relative">
                 <button
-                  className="text-gray-700 hover:text-green-600 font-medium flex items-center"
+                  className="text-white hover:text-red-100 font-medium flex items-center"
                   onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
                 >
                   Categories
@@ -233,7 +241,7 @@ export default function MalawiMarketplaceLanding() {
                   </div>
                 )}
               </div>
-              <Link href="/sell-with-us" className="text-gray-700 hover:text-green-600 font-medium">
+              <Link href="/sell-with-us" className="text-white hover:text-red-100 font-medium">
                 Sell with Us
               </Link>
             </div>
@@ -245,35 +253,25 @@ export default function MalawiMarketplaceLanding() {
                   <Input
                     type="text"
                     placeholder="Search products..."
-                    className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                    className="w-64 pl-10 pr-4 py-2 bg-white border border-white/30 rounded-lg focus:outline-none focus:border-white text-gray-900 placeholder-gray-500"
                   />
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 </div>
               </div>
               
-              {session ? (
-                <Link href="/buyer/profile">
-                  <Button variant="ghost" className="text-gray-700 hover:text-green-600">
-                    My Account
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Link href="/login">
-                    <Button variant="ghost" className="text-gray-700 hover:text-green-600">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/register">
-                    <Button variant="ghost" className="text-gray-700 hover:text-green-600">
-                      Register
-                    </Button>
-                  </Link>
-                </>
-              )}
+              <Link href="/login">
+                <Button variant="ghost" className="text-white hover:text-red-100">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button variant="ghost" className="text-white hover:text-red-100">
+                  Register
+                </Button>
+              </Link>
               
               <Link href="/cart" className="relative">
-                <Button variant="ghost" size="icon" className="text-gray-700 hover:text-green-600">
+                <Button variant="ghost" size="icon" className="text-white hover:text-red-100">
                   <ShoppingCart className="h-5 w-5" />
                   {cartCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
@@ -296,74 +294,16 @@ export default function MalawiMarketplaceLanding() {
         </div>
       </nav>
 
-      {/* Banner Carousel - Tambala Market Style */}
-      <BannerCarousel 
-        autoPlay={true}
-        interval={5000}
-        showControls={true}
-        showIndicators={true}
-        banners={[
-          {
-            id: '1',
-            title: "🇲🇼 Martyrs' Day Specials",
-            description: "Honour the heroes with special deals and discounts",
-            image: "https://images.unsplash.com/photo-1579533425342-3d5f0b6e5c?w=800&h=400&fit=crop",
-            ctaText: "Shop Now",
-            ctaLink: "/shop?promotion=martyrs-day",
-            bgColor: "#CE1126",
-            textColor: "#FFFFFF",
-            isActive: true,
-            order: 1
-          },
-          {
-            id: '2',
-            title: "Launch Your Online Store",
-            description: "Reach customers across Malawi. Register and start selling in under 30 minutes.",
-            image: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&h=400&fit=crop",
-            ctaText: "Learn More",
-            ctaLink: "/sell-with-us",
-            bgColor: "#006B3F",
-            textColor: "#FFFFFF",
-            isActive: true,
-            order: 2
-          },
-          {
-            id: '3',
-            title: "Chitenje & Traditional Fabrics",
-            description: "Celebrate culture with authentic chitenje fabric and ready-made items",
-            image: "https://images.unsplash.com/photo-1578662946309-999491bb0c77?w=800&h=400&fit=crop",
-            ctaText: "See More",
-            ctaLink: "/categories/chitenje-traditional-fabrics",
-            bgColor: "#FCD116",
-            textColor: "#006B3F",
-            isActive: true,
-            order: 3
-          },
-          {
-            id: '4',
-            title: "Top Picks For You",
-            description: "Handpicked products based on your preferences and shopping history",
-            image: "https://images.unsplash.com/photo-1556742049-0cfed417a544?w=800&h=400&fit=crop",
-            ctaText: "Explore",
-            ctaLink: "/shop?featured=true",
-            bgColor: "#006B3F",
-            textColor: "#FFFFFF",
-            isActive: true,
-            order: 4
-          }
-        ]}
-      />
-
       {/* Category Navigation - Tambala Market Style */}
-      <section className="bg-white border-b">
+      <section className="bg-white border-b sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center space-x-1 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center justify-center py-4">
+            <div className="flex items-center space-x-6 overflow-x-auto scrollbar-hide">
               {categories.slice(1).map((category) => (
                 <Link 
                   key={category.name} 
                   href={`/categories/${category.name.toLowerCase().replace(/\s+/g, '-')}`} 
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors whitespace-nowrap"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors whitespace-nowrap flex-shrink-0"
                 >
                   <category.icon className="h-4 w-4 flex-shrink-0" />
                   <span>{category.name}</span>
@@ -374,13 +314,38 @@ export default function MalawiMarketplaceLanding() {
         </div>
       </section>
 
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+
+      {/* Banner Carousel - Tambala Market Style */}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64 md:h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-300"></div>
+        </div>
+      ) : (
+        <BannerCarousel 
+          autoPlay={true}
+          interval={5000}
+          showControls={true}
+          showIndicators={true}
+          banners={banners}
+        />
+      )}
+
       {/* New Arrivals Section - Tambala Style */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-                New <span style={{ color: colors.primary }}>Arrivals</span>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                New Arrivals
               </h2>
               <p className="text-gray-600">Fresh products uploaded by our sellers</p>
             </div>
@@ -503,8 +468,8 @@ export default function MalawiMarketplaceLanding() {
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-              Shop by <span style={{ color: colors.primary }}>Category</span>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Shop by Category
             </h2>
             <p className="text-gray-600">Browse products by your preferred category</p>
           </div>
@@ -627,8 +592,8 @@ export default function MalawiMarketplaceLanding() {
               <Badge className="mb-4 px-4 py-2 text-sm font-bold" style={{ backgroundColor: colors.accent, color: 'white' }}>
                 � TODAY'S DEALS
               </Badge>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-                Today's <span style={{ color: colors.accent }}>Deals</span>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Today's Deals
               </h2>
               <p className="text-gray-600">Limited time offers from verified sellers</p>
             </div>
@@ -721,8 +686,8 @@ export default function MalawiMarketplaceLanding() {
       <section className="py-12 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
-              Featured <span style={{ color: colors.primary }}>Stores</span>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              Featured Stores
             </h2>
             <p className="text-gray-600">Discover top-rated sellers and their best products</p>
           </div>

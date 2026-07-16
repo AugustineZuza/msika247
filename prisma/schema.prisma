@@ -75,6 +75,12 @@ model User {
   phone         String?
   isActive      Boolean   @default(true)
   lastLoginAt   DateTime?
+  resetToken           String?
+  resetTokenExpires    DateTime?
+  emailVerificationToken String?
+  emailVerificationExpires DateTime?
+  activationToken      String?
+  activationTokenExpires DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
@@ -297,6 +303,11 @@ model Product {
   isFeatured       Boolean          @default(false)
   rating           Float            @default(0)
   totalReviews     Int              @default(0)
+  // Location fields
+  locationCity     String?
+  locationDistrict  String?
+  locationRegion   String?
+  locationAddress  String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -316,6 +327,9 @@ model Product {
   @@index([isFeatured])
   @@index([price])
   @@index([createdAt])
+  @@index([locationCity])
+  @@index([locationDistrict])
+  @@index([locationRegion])
 }
 
 // Cart model

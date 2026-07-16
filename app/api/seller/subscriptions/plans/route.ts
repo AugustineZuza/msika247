@@ -14,7 +14,11 @@ export async function GET(request: NextRequest) {
 
     if (!token?.sub) {
       console.log('Plans API - No token found')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        plans: [],
+        subscription: null
+      }, { status: 401 })
     }
 
     const seller = await prisma.seller.findUnique({
@@ -32,7 +36,11 @@ export async function GET(request: NextRequest) {
 
     if (!seller) {
       console.log('Plans API - Seller not found for userId:', token.sub)
-      return NextResponse.json({ error: 'Seller profile not found' }, { status: 404 })
+      return NextResponse.json({ 
+        error: 'Seller profile not found',
+        plans: [],
+        subscription: null
+      }, { status: 404 })
     }
 
     const plans = await prisma.subscriptionPlan.findMany({
@@ -42,19 +50,24 @@ export async function GET(request: NextRequest) {
 
     console.log('Plans API - Found plans:', plans.length)
 
-    return NextResponse.json({
-      plans,
-      subscription: seller.subscription
-        ? {
-            id: seller.subscription.id,
-            status: seller.subscription.status,
-            endDate: seller.subscription.endDate,
-            startDate: seller.subscription.startDate,
-            plan: seller.subscription.plan,
-            isActive: seller.isActive,
-          }
-        : null,
-    })
+    try {
+      return NextResponse.json({
+        plans,
+        subscription: seller.subscription
+          ? {
+              id: seller.subscription.id,
+              status: seller.subscription.status,
+              endDate: seller.subscription.endDate,
+              startDate: seller.subscription.startDate,
+              plan: seller.subscription.plan,
+              isActive: seller.isActive,
+            }
+          : null,
+      })
+    } catch (err) {
+      console.error('Error sending response:', err)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
   } catch (error) {
     console.error('Seller plans API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

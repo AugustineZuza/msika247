@@ -197,7 +197,8 @@ export async function POST(request: NextRequest) {
       tags,
       condition,
       courierAvailable,
-      courierPrice
+      courierPrice,
+      location
     } = body
 
     // Validate required fields
@@ -276,7 +277,14 @@ export async function POST(request: NextRequest) {
         condition: condition || 'NEW',
         isActive: true,
         courierAvailable: courierAvailable || false,
-        courierPrice: courierPrice ? parseFloat(courierPrice) : null
+        courierPrice: courierPrice ? parseFloat(courierPrice) : null,
+        // Type assertion for new location fields
+        ...(location && {
+          locationCity: location.city || null,
+          locationDistrict: location.district || null,
+          locationRegion: location.region || null,
+          locationAddress: location.address || null
+        })
       },
       include: {
         category: {

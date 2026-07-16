@@ -27,8 +27,12 @@ export async function GET(request: NextRequest) {
     })
     
     if (!token?.sub) {
+      console.log('Unauthorized request - no token found')
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { 
+          error: 'Unauthorized',
+          subscription: null
+        },
         { status: 401 }
       )
     }
@@ -46,8 +50,12 @@ export async function GET(request: NextRequest) {
     })
 
     if (!seller) {
+      console.log('Seller profile not found for user:', token.sub)
       return NextResponse.json(
-        { error: 'Seller profile not found' },
+        { 
+          error: 'Seller profile not found',
+          subscription: null
+        },
         { status: 404 }
       )
     }

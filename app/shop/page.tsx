@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Header } from '@/components/header'
 import { useCart } from '@/hooks/useCart'
 import { useSession } from 'next-auth/react'
+import { WishlistButton } from '@/components/ui/wishlist-button'
 import { 
   Star, 
   ShoppingCart, 
@@ -19,7 +20,8 @@ import {
   ArrowRight,
   MapPin,
   Loader2,
-  X
+  X,
+  Heart
 } from 'lucide-react'
 
 // Malawi-inspired color palette
@@ -55,6 +57,12 @@ interface Product {
   soldCount?: number
   isActive?: boolean
   createdAt?: string
+  location?: {
+    city: string
+    district: string
+    region: string
+    address: string
+  }
 }
 
 interface Category {
@@ -123,14 +131,10 @@ function ShopPageComponent() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories')
+      const response = await fetch('/api/shop/categories')
       if (response.ok) {
         const data = await response.json()
-        const formattedCategories = data.categories.map((cat: any) => ({
-          ...cat,
-          _count: { products: cat.productCount }
-        }))
-        setCategories(formattedCategories)
+        setCategories(data)
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error)
@@ -220,29 +224,27 @@ function ShopPageComponent() {
     <div className="min-h-screen" style={{ backgroundColor: colors.background }}>
       <Header />
       
-      <div className="max-w-9xl mx-auto px-6 py-8">
+      <div className="max-w-9xl mx-auto px-6 py-6">
         {/* Header */}
-        <div className="mb-12">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-6 mb-4">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transform hover:scale-105 transition-all duration-300" style={{ backgroundColor: colors.primary }}>
-                <span className="text-white font-bold text-2xl">🇲🇼</span>
-              </div>
-              <div>
-                <h1 className="text-6xl font-black text-gray-900 mb-3" style={{ color: colors.primary }}>
-                  Malawi Marketplace
-                </h1>
-                <p className="text-gray-600 text-xl font-medium">Discover quality products from trusted local sellers</p>
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <MapPin className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-500">Serving Lilongwe, Blantyre, Mzuzu and beyond</span>
-                </div>
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-all duration-300" style={{ backgroundColor: colors.primary }}>
+              <span className="text-white font-bold text-xl">🇲🇼</span>
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2" style={{ color: colors.primary }}>
+                Malawi Marketplace
+              </h1>
+              <p className="text-gray-600 text-lg font-medium">Discover quality products from trusted local sellers</p>
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-500">Serving Lilongwe, Blantyre, Mzuzu and beyond</span>
               </div>
             </div>
           </div>
           
           {/* Search Bar */}
-          <div className="max-w-2xl mx-auto mb-8">
+          <div className="max-w-3xl mx-auto mb-8">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -250,7 +252,7 @@ function ShopPageComponent() {
                 placeholder="Search for products, brands, or categories..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 text-lg border-2 rounded-2xl focus:ring-4 shadow-lg transition-all duration-300 focus:ring-primary/20"
+                className="w-full pl-12 pr-4 py-3 text-lg border-2 rounded-xl focus:ring-4 shadow-lg transition-all duration-300 focus:ring-primary/20"
                 style={{ borderColor: colors.primary + '30' }}
               />
               {searchTerm && (
@@ -377,16 +379,41 @@ function ShopPageComponent() {
 
         {/* Products Grid/List */}
         {products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {products.map((product) => (
-              <Card key={product.id} className="group hover:shadow-xl transition-shadow duration-300">
-                <CardContent className="p-4">
+              <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-300 border border-gray-200" data-testid="product-card">
+                <CardContent className="p-3">
                   <div className="relative">
-                    <img 
-                      src={product.images.length > 0 ? product.images[0] : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=300&fit=crop'}
-                      alt={product.name}
-                      className="w-full h-48 object-cover rounded-lg mb-4"
-                    />
+                    <div className="w-full h-40 bg-gray-200 rounded-lg mb-3 animate-pulse">
+                      <img 
+                        src={product.images && product.images.length > 0 ? product.images[0] : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=300&fit=crop'}
+                        alt={product.name}
+                        className="w-full h-40 object-cover rounded-lg mb-3"
+                        style={{ display: 'block' }}
+                        onLoad={(e) => {
+                          // Hide skeleton when image loads
+                          const target = e.target as HTMLImageElement
+                          target.parentElement?.classList.remove('animate-pulse', 'bg-gray-200')
+                        }}
+                        onError={(e) => {
+                          // Fallback to a different image if the first one fails
+                          const target = e.target as HTMLImageElement
+                          const parent = target.parentElement
+                          if (parent) {
+                            parent.classList.remove('animate-pulse', 'bg-gray-200')
+                          }
+                          
+                          if (target.src.includes('unsplash')) {
+                            // If unsplash fails, use a different fallback
+                            target.src = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300&h=300&fit=crop'
+                          } else {
+                            // Final fallback
+                            target.src = 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=300&fit=crop'
+                          }
+                        }}
+                        loading="lazy"
+                      />
+                    </div>
                     {product.discountPrice && (
                       <Badge 
                         className="absolute top-2 right-2 px-2 py-1 text-xs font-semibold"
@@ -402,17 +429,17 @@ function ShopPageComponent() {
                     </Badge>
                   </div>
                   
-                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                  <h3 className="font-semibold text-gray-900 mb-2 text-sm line-clamp-2">
                     {product.name}
                   </h3>
                   
-                  <div className="space-y-2 mb-2">
+                  <div className="space-y-1 mb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <MapPin className="h-3 w-3 text-gray-400" />
                         <Link 
                           href={`/sellers/${product.seller.id}`}
-                          className="text-sm text-gray-600 hover:text-green-600 transition-colors"
+                          className="text-xs text-gray-600 hover:text-green-600 transition-colors"
                         >
                           {product.seller.businessName}
                         </Link>
@@ -426,11 +453,17 @@ function ShopPageComponent() {
                         <span>{product.seller.district}</span>
                       </div>
                     )}
+                    {product.location && (
+                      <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        <MapPin className="h-3 w-3" />
+                        <span>{product.location.city}, {product.location.region}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1 mb-3">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm text-gray-600">
+                    <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                    <span className="text-xs text-gray-600">
                       {(product.averageRating || 0) > 0 ? `${product.averageRating} (${product.reviewCount || 0})` : 'New Product'}
                     </span>
                   </div>
@@ -438,15 +471,15 @@ function ShopPageComponent() {
                   <div className="mb-3">
                     {product.discountPrice ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-green-600">
+                        <span className="text-base font-bold text-green-600">
                           {formatPrice(product.discountPrice)}
                         </span>
-                        <span className="text-sm text-gray-500 line-through">
+                        <span className="text-xs text-gray-500 line-through">
                           {formatPrice(product.price)}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-lg font-bold text-gray-900">
+                      <span className="text-base font-bold text-gray-900">
                         {formatPrice(product.price)}
                       </span>
                     )}
@@ -457,19 +490,28 @@ function ShopPageComponent() {
                       <Button 
                         variant="outline"
                         size="sm"
-                        className="w-full border-gray-300 hover:border-green-600"
+                        className="w-full border-gray-300 hover:border-green-600 text-xs"
                       >
                         View
                       </Button>
                     </Link>
-                    <Button 
-                      size="sm"
-                      className="text-white hover:opacity-90"
-                      style={{ backgroundColor: colors.accent }}
-                      onClick={() => handleAddToCart(product.id)}
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <WishlistButton
+                        productId={product.id}
+                        productName={product.name}
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                      />
+                      <Button 
+                        size="sm"
+                        className="text-white hover:opacity-90 text-xs"
+                        style={{ backgroundColor: colors.accent }}
+                        onClick={() => handleAddToCart(product.id)}
+                      >
+                        <ShoppingCart className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

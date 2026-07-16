@@ -37,14 +37,22 @@ export function useCart() {
         return
       }
       
+      if (response.status === 404) {
+        // User might be a SELLER without BUYER profile, set cart count to 0
+        console.log('User is likely a SELLER, no cart available')
+        setCartCount(0)
+        setIsLoading(false)
+        return
+      }
+      
       if (response.ok) {
         const data = await response.json()
         const count = data.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0
         console.log('Cart count calculated:', count, 'from items:', data.items)
         setCartCount(count)
       } else {
-        // Only log as error if it's not a 401 (unauthorized)
-        if (response.status !== 401) {
+        // Only log as error if it's not a 401 or 404
+        if (response.status !== 401 && response.status !== 404) {
           console.error('Cart API error:', response.status, response.statusText)
         }
         setCartCount(0) // Set to 0 on error

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -12,7 +13,11 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X
+  X,
+  ChevronDown,
+  TrendingUp,
+  Edit,
+  Image as ImageIcon
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 
@@ -24,8 +29,17 @@ interface AdminSidebarProps {
 const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Sellers', href: '/admin/sellers', icon: Users },
-  { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
+  { 
+    name: 'Subscriptions', 
+    href: '/admin/subscriptions', 
+    icon: CreditCard,
+    submenu: [
+      { name: 'Overview', href: '/admin/subscriptions', icon: CreditCard },
+      { name: 'Manage Plans', href: '/admin/subscription-plans', icon: Edit }
+    ]
+  },
   { name: 'Products', href: '/admin/products', icon: Package },
+  { name: 'Banners', href: '/admin/banners', icon: ImageIcon },
   { name: 'Orders', href: '/admin/admin-orders', icon: ShoppingCart },
   { name: 'Payments', href: '/admin/payments', icon: DollarSign },
   { name: 'Users', href: '/admin/users', icon: Users },
@@ -34,6 +48,19 @@ const navigation = [
 
 export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const pathname = usePathname()
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Subscriptions'])
+
+  const toggleSubmenu = (itemName: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemName) 
+        ? prev.filter(item => item !== itemName)
+        : [...prev, itemName]
+    )
+  }
+
+  const isSubmenuActive = (submenu: any[]) => {
+    return submenu.some(item => pathname === item.href)
+  }
 
   return (
     <>
@@ -54,25 +81,85 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
         <nav className="mt-6 px-3">
           <div className="space-y-1">
             {navigation.map((item) => {
-              const isActive = pathname === item.href
+              const isActive = item.submenu ? isSubmenuActive(item.submenu) : pathname === item.href
+              const isExpanded = expandedItems.includes(item.name)
+              
               return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={onClose}
-                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <item.icon
-                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                      isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
-                    }`}
-                  />
-                  {item.name}
-                </Link>
+                <div key={item.name}>
+                  {item.submenu ? (
+                    <div>
+                      <button
+                        onClick={() => toggleSubmenu(item.name)}
+                        className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <item.icon
+                            className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                              isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                            }`}
+                          />
+                          {item.name}
+                        </div>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          } ${
+                            isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                          }`}
+                        />
+                      </button>
+                      
+                      {isExpanded && (
+                        <div className="ml-8 mt-1 space-y-1">
+                          {item.submenu.map((subItem) => {
+                            const subIsActive = pathname === subItem.href
+                            return (
+                              <Link
+                                key={subItem.name}
+                                href={subItem.href}
+                                onClick={onClose}
+                                className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                  subIsActive
+                                    ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
+                              >
+                                <subItem.icon
+                                  className={`mr-3 h-4 w-4 flex-shrink-0 ${
+                                    subIsActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                                  }`}
+                                />
+                                {subItem.name}
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={onClose}
+                      className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <item.icon
+                        className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                          isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                        }`}
+                      />
+                      {item.name}
+                    </Link>
+                  )}
+                </div>
               )
             })}
           </div>
@@ -98,24 +185,83 @@ export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
         <nav className="mt-6 px-3">
           <div className="space-y-1">
             {navigation.map((item) => {
-              const isActive = pathname === item.href
+              const isActive = item.submenu ? isSubmenuActive(item.submenu) : pathname === item.href
+              const isExpanded = expandedItems.includes(item.name)
+              
               return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <item.icon
-                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                      isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
-                    }`}
-                  />
-                  {item.name}
-                </Link>
+                <div key={item.name}>
+                  {item.submenu ? (
+                    <div>
+                      <button
+                        onClick={() => toggleSubmenu(item.name)}
+                        className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <item.icon
+                            className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                              isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                            }`}
+                          />
+                          {item.name}
+                        </div>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          } ${
+                            isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                          }`}
+                        />
+                      </button>
+                      
+                      {isExpanded && (
+                        <div className="ml-8 mt-1 space-y-1">
+                          {item.submenu.map((subItem) => {
+                            const subIsActive = pathname === subItem.href
+                            return (
+                              <Link
+                                key={subItem.name}
+                                href={subItem.href}
+                                className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                  subIsActive
+                                    ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
+                              >
+                                <subItem.icon
+                                  className={`mr-3 h-4 w-4 flex-shrink-0 ${
+                                    subIsActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                                  }`}
+                                />
+                                {subItem.name}
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <item.icon
+                        className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                          isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                        }`}
+                      />
+                      {item.name}
+                    </Link>
+                  )}
+                </div>
               )
             })}
           </div>

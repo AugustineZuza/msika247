@@ -13,6 +13,13 @@ import { toast } from '@/components/ui/use-toast'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Loader2, ShieldCheck, Sparkles } from 'lucide-react'
 
+// Extend Window interface for debugging
+declare global {
+  interface Window {
+    refreshSubscriptionPlans?: () => void
+  }
+}
+
 interface SubscriptionPlan {
   id: string
   name: string
@@ -77,17 +84,40 @@ export default function SellerSubscriptionPage() {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch('/api/seller/subscriptions/plans', { cache: 'no-store' })
+      console.log('Fetching subscription plans...')
+      const response = await fetch('/api/seller/subscriptions/plans', { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
 
+      console.log('Plans API response status:', response.status)
+      console.log('Plans API response headers:', response.headers)
+      
       if (!response.ok) {
-        throw new Error('Failed to load subscription plans')
+        const errorText = await response.text()
+        console.error('Plans API failed:', response.status, errorText)
+        
+        // Handle missing seller profile specifically
+        if (response.status === 404 && errorText.includes('Seller profile not found')) {
+          setError('You need to create a seller profile first before accessing subscription plans.')
+          return
+        }
+        
+        throw new Error(`Failed to load subscription plans: ${response.status} ${errorText}`)
       }
 
       const data = (await response.json()) as PlansResponse
-      setPlans(data.plans)
+      console.log('Plans data received:', data)
+      console.log('Plans array length:', data.plans?.length)
+      console.log('Subscription data:', data.subscription)
+      
+      setPlans(data.plans || [])
       setSubscription(data.subscription)
     } catch (err) {
-      console.error(err)
+      console.error('Fetch plans error:', err)
       setError((err as Error).message || 'Unable to load plans right now.')
     } finally {
       setIsLoading(false)
@@ -97,6 +127,17 @@ export default function SellerSubscriptionPage() {
   useEffect(() => {
     fetchData()
   }, [])
+
+  // Add a manual refresh option
+  useEffect(() => {
+    const handleRefresh = () => {
+      console.log('Manual refresh triggered')
+      fetchData()
+    }
+    
+    // Make it available globally for debugging
+    window.refreshSubscriptionPlans = handleRefresh
+  }, [fetchData])
 
   const handleSubscribe = async (planId: string) => {
     try {
@@ -227,8 +268,27 @@ export default function SellerSubscriptionPage() {
             <CardTitle>Unable to load plans</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={fetchData}>Try again</Button>
+          <CardContent className="space-y-3">
+            {error.includes('create a seller profile') && (
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  To start selling on Markert, you first need to set up your seller profile with your business information.
+                </p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button onClick={fetchData}>Try again</Button>
+              {error.includes('create a seller profile') && (
+                <Button variant="outline" asChild>
+                  <Link href="/seller/register">Create Seller Profile</Link>
+                </Button>
+              )}
+            </div>
+            <div className="mt-2">
+              <p className="text-xs text-gray-500">
+                If you just created a seller profile, try refreshing the page or click "Try again" above.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

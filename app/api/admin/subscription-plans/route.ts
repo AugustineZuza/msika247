@@ -4,11 +4,28 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    const plans = [
-      { id: '1', name: 'Starter', monthlyPrice: 9.99, features: ['10 products', 'Basic analytics'] },
-      { id: '2', name: 'Pro', monthlyPrice: 29.99, features: ['100 products', 'Advanced analytics', 'Priority support'] },
-      { id: '3', name: 'Enterprise', monthlyPrice: 99.99, features: ['Unlimited products', 'Full analytics', '24/7 support'] },
-    ]
+    const session = await auth()
+
+    if (!session?.user?.id || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const includeInactive = searchParams.get('includeInactive') === 'true'
+
+    const plans = await prisma.subscriptionPlan.findMany({
+      where: includeInactive ? {} : { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        _count: {
+          select: {
+            subscriptions: {
+              where: { status: 'ACTIVE' }
+            }
+          }
+        }
+      }
+    })
 
     return NextResponse.json(plans)
   } catch (error) {
@@ -29,18 +46,46 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description, monthlyPrice, maxProducts, maxOrders, features } = body
+    const { 
+      name, 
+      description, 
+      monthlyPrice, 
+      yearlyPrice, 
+      maxProducts, 
+      maxOrders, 
+      features,
+      sortOrder = 0 
+    } = body
+
+    // Validate required fields
+    if (!name || !monthlyPrice) {
+      return NextResponse.json(
+        { error: 'Name and monthly price are required' },
+        { status: 400 }
+      )
+    }
 
     const plan = await prisma.subscriptionPlan.create({
       data: {
         name,
         description,
-        monthlyPrice,
-        maxProducts,
-        maxOrders,
-        features: features || [],
+        monthlyPrice: parseFloat(monthlyPrice),
+        yearlyPrice: yearlyPrice ? parseFloat(yearlyPrice) : null,
+        maxProducts: maxProducts ? parseInt(maxProducts) : 100,
+        maxOrders: maxOrders ? parseInt(maxOrders) : -1,
+        features: Array.isArray(features) ? JSON.stringify(features) : features,
         isActive: true,
+        sortOrder: parseInt(sortOrder),
       },
+      include: {
+        _count: {
+          select: {
+            subscriptions: {
+              where: { status: 'ACTIVE' }
+            }
+          }
+        }
+      }
     })
 
     return NextResponse.json(plan, { status: 201 })

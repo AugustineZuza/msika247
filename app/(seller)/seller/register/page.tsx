@@ -52,7 +52,7 @@ export default function SellerRegisterPage() {
     }
 
     if (!formData.agreeTerms) {
-      setErrors({ agreeTerms: 'You must agree to the terms and conditions' })
+      setErrors({ agreeTerms: 'You must agree to terms and conditions' })
       return
     }
 
@@ -60,17 +60,42 @@ export default function SellerRegisterPage() {
       setLoading(true)
       setErrors({})
 
-      // TODO: Implement actual registration logic
-      console.log('Registration data:', formData)
+      // Call the seller registration API
+      const response = await fetch('/api/seller/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: formData.businessName,
+          businessEmail: formData.businessEmail,
+          businessPhone: formData.businessPhone,
+          businessAddress: formData.businessAddress,
+          businessCategory: formData.businessCategory,
+          businessDescription: formData.businessDescription,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.error === 'Seller profile already exists') {
+          setErrors({ submit: 'You already have a seller profile. Please sign in instead.' })
+          return
+        }
+        throw new Error(data.error || 'Registration failed')
+      }
+
+      console.log('Seller profile created successfully:', data)
       
-      // For now, just redirect to seller dashboard
-      setTimeout(() => {
-        router.push('/seller/dashboard')
-      }, 1000)
+      // Redirect to subscription page to choose a plan
+      router.push('/seller/subscription')
 
     } catch (error) {
       console.error('Registration error:', error)
-      setErrors({ submit: 'Registration failed. Please try again.' })
+      setErrors({ submit: (error as Error).message || 'Registration failed. Please try again.' })
     } finally {
       setLoading(false)
     }

@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate average rating for each product
     const productsWithRatings = await Promise.all(
-      products.map(async (product) => {
+      products.map(async (product: any) => {
         const reviews = await prisma.review.findMany({
           where: { productId: product.id },
           select: { rating: true }
@@ -142,23 +142,32 @@ export async function GET(request: NextRequest) {
     )
 
     // Format products
-    const formattedProducts = productsWithRatings.map(product => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      discountPrice: product.discountPrice,
-      description: product.description,
-      stock: product.stock,
-      images: product.images ? JSON.parse(product.images) : [],
-      category: product.category,
-      seller: product.seller,
-      courierAvailable: product.courierAvailable,
-      courierPrice: product.courierPrice,
-      averageRating: product.rating,
-      reviewCount: product.totalReviews,
-      isActive: product.isActive,
-      createdAt: product.createdAt
-    }))
+    const formattedProducts = productsWithRatings.map((product: any) => {
+      let images = []
+      try {
+        images = product.images ? JSON.parse(product.images) : []
+      } catch {
+        images = []
+      }
+      return {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        discountPrice: product.discountPrice,
+        description: product.description,
+        stock: product.stock,
+        images,
+        category: product.category,
+        seller: product.seller,
+        courierAvailable: product.courierAvailable,
+        courierPrice: product.courierPrice,
+        averageRating: product.rating,
+        reviewCount: product.totalReviews,
+        isActive: product.isActive,
+        createdAt: product.createdAt,
+        location: null
+      }
+    })
 
     const pages = Math.ceil(total / limit)
 

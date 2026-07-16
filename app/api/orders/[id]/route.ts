@@ -22,11 +22,31 @@ export async function GET(
       where: { userId: token.sub }
     })
 
-    if (!buyer) {
-      return NextResponse.json({ error: 'Buyer profile not found' }, { status: 404 })
-    }
+    console.log('Order API - Token user ID:', token.sub)
+    console.log('Order API - Buyer found:', !!buyer)
 
     const orderId = id
+
+    // If no buyer profile with current session, try to find order by ID first
+    if (!buyer) {
+      console.log('Order API - No buyer profile found, checking order directly')
+      
+      // Try to find the order first to see if it exists
+      const orderExists = await prisma.order.findUnique({
+        where: { id: orderId }
+      })
+      
+      if (orderExists) {
+        console.log('Order API - Order exists but user mismatch, returning limited info')
+        return NextResponse.json({ 
+          error: 'Access denied - This order belongs to a different account',
+          code: 'USER_MISMATCH',
+          orderId: orderId 
+        }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: 'Buyer profile not found' }, { status: 404 })
+    }
 
     // Fetch specific order with all details
     const order = await prisma.order.findFirst({

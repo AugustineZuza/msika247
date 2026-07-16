@@ -60,8 +60,15 @@ interface Product {
   courierPrice?: number | null
   averageRating?: number
   reviewCount?: number
+  soldCount?: number
   isActive?: boolean
   createdAt?: string
+  location?: {
+    city: string
+    district: string
+    region: string
+    address: string
+  }
 }
 
 interface Review {
@@ -372,6 +379,12 @@ function ProductPageComponent() {
                   <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded">
                     <MapPin className="w-4 h-4" />
                     <span>{product.seller.district}</span>
+                  </div>
+                )}
+                {product.location && (
+                  <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded">
+                    <MapPin className="w-4 h-4" />
+                    <span>{product.location.city}, {product.location.region}</span>
                   </div>
                 )}
               </div>

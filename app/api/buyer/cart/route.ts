@@ -23,6 +23,16 @@ export async function GET(request: NextRequest) {
       role: token.role
     })
 
+    // Check if user is a SELLER
+    if (token.role === 'SELLER') {
+      console.log('Cart API - User is SELLER, cart not applicable')
+      return NextResponse.json({
+        items: [],
+        total: 0,
+        message: 'Cart is only available for buyers'
+      })
+    }
+
     // Get user directly
     const user = await prisma.user.findUnique({
       where: { id: token.sub }

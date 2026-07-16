@@ -5,6 +5,7 @@ import { initiatePaychanguCheckout } from '@/lib/paychangu'
 import { createPaymentNotification } from '@/lib/notifications'
 import { createNewOrderNotification } from '@/lib/notifications'
 import { getCallbackUrl } from '@/lib/tunnel'
+import { emailService } from '@/lib/email'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
@@ -216,6 +217,36 @@ export async function POST(request: NextRequest) {
       customerName: buyer.user.name || 'Customer',
       amount: totalAmount
     }).catch(err => console.warn('Order notification failed:', err))
+
+    // Send order confirmation email to buyer (non-blocking)
+    emailService.sendOrderConfirmationEmail(buyer.user.email!, {
+      orderNumber,
+      items: orderItems.map(item => ({
+        name: JSON.parse(item.productSnapshot).name,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      totalAmount,
+      shippingAddress
+    }).catch(err => console.warn('Order confirmation email failed:', err))
+
+    // Send new order email to seller (non-blocking)
+    const seller = await prisma.seller.findUnique({
+      where: { id: sellerId! },
+      include: { user: true }
+    })
+    
+    if (seller?.user?.email) {
+      emailService.sendNewOrderEmail(seller.user.email, {
+        orderNumber,
+        customerName: buyer.user.name || 'Customer',
+        items: orderItems.map(item => ({
+          name: JSON.parse(item.productSnapshot).name,
+          quantity: item.quantity
+        })),
+        totalAmount
+      }).catch(err => console.warn('New order email to seller failed:', err))
+    }
 
     return NextResponse.json({
       checkoutUrl: checkoutSession.checkout_url,

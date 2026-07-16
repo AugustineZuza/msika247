@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import BannerPlaceholder from './banner-placeholder'
 
 interface Banner {
   id: string
@@ -80,11 +81,20 @@ export default function BannerCarousel({
         {/* Background Image */}
         {currentBanner.image && (
           <div 
-            className="absolute inset-0 opacity-20"
+            className="absolute inset-0 opacity-30"
             style={{
               backgroundImage: `url(${currentBanner.image})`,
               backgroundSize: 'cover',
-              backgroundPosition: 'center'
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
+            onError={(e) => {
+              console.log('Background image failed to load:', currentBanner.image)
+              // Hide image on error
+              e.currentTarget.style.display = 'none'
+            }}
+            onLoad={() => {
+              console.log('Background image loaded successfully:', currentBanner.image)
             }}
           />
         )}
@@ -118,15 +128,33 @@ export default function BannerCarousel({
               </div>
 
               {/* Image/Side Content */}
-              {currentBanner.image && (
-                <div className="hidden md:flex justify-center">
+              <div className="hidden md:flex justify-center">
+                {currentBanner.image && (
                   <img 
                     src={currentBanner.image}
                     alt={currentBanner.title}
                     className="max-w-full h-48 md:h-64 object-contain"
+                    onError={(e) => {
+                      console.log('Side image failed to load:', currentBanner.image)
+                      // Show placeholder on error
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                      const placeholder = target.nextElementSibling as HTMLElement
+                      if (placeholder) placeholder.style.display = 'flex'
+                    }}
+                    onLoad={() => {
+                      console.log('Side image loaded successfully:', currentBanner.image)
+                    }}
                   />
-                </div>
-              )}
+                )}
+                <BannerPlaceholder 
+                  title={currentBanner.title}
+                  bgColor={currentBanner.bgColor}
+                  textColor={currentBanner.textColor}
+                  className="max-w-full h-48 md:h-64"
+                  style={{ display: currentBanner.image ? 'none' : 'flex' }}
+                />
+              </div>
             </div>
           </div>
         </div>

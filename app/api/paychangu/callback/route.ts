@@ -4,6 +4,7 @@ import { PaymentStatus, SubscriptionStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { verifyPaychanguTransaction } from '@/lib/paychangu'
 import { createPaymentNotification } from '@/lib/notifications'
+import { emailService } from '@/lib/email'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
@@ -14,7 +15,11 @@ const orderFailureRedirect = `${APP_URL}/checkout?status=failed`
 
 // Helper function to redirect to specific order page
 function getOrderRedirectUrl(orderId: string): string {
-  return `${APP_URL}/orders/${orderId}?success=true`
+  console.log('Creating redirect URL for order ID:', orderId)
+  console.log('Order ID length:', orderId.length)
+  const redirectUrl = `${APP_URL}/orders/${orderId}?success=true`
+  console.log('Full redirect URL:', redirectUrl)
+  return redirectUrl
 }
 
 function extractTxRef(payload: any): string | null {
@@ -91,21 +96,44 @@ async function processPaychanguTransaction(txRef: string) {
     return { success: false }
   }
 
+  // More reliable payment type detection
   const meta = verification?.data?.meta || {}
-  const paymentType = meta.type || 'subscription'
+  let paymentType: 'subscription' | 'product_order'
   
-  console.log('Payment type detection:', {
-    meta,
-    paymentType,
-    verificationData: verification?.data,
-    paymentOrderId: payment.orderId
-  })
-
-  // Fallback: if payment already has orderId, treat as product order
-  if (payment.orderId && paymentType === 'subscription') {
-    console.log('Payment has orderId, treating as product order instead of subscription')
-    // Update payment type based on existing orderId
+  // Primary check: if payment has orderId, it's definitely a product order
+  if (payment.orderId) {
+    paymentType = 'product_order'
+    console.log('Payment type determined: PRODUCT_ORDER (has orderId)')
+  } 
+  // Secondary check: check meta.type
+  else if (meta.type) {
+    paymentType = meta.type === 'product_order' ? 'product_order' : 'subscription'
+    console.log('Payment type determined from meta.type:', paymentType)
   }
+  // Fallback: check for subscription-specific metadata
+  else if (meta.planId || meta.plan_id || meta.sellerId || meta.seller_id) {
+    paymentType = 'subscription'
+    console.log('Payment type determined: SUBSCRIPTION (has subscription metadata)')
+  }
+  // Last resort: check customization title for clues
+  else {
+    const title = verification?.data?.customization?.title || ''
+    if (title.toLowerCase().includes('order')) {
+      paymentType = 'product_order'
+      console.log('Payment type determined from title: PRODUCT_ORDER')
+    } else {
+      paymentType = 'subscription'
+      console.log('Payment type determined: SUBSCRIPTION (default)')
+    }
+  }
+  
+  console.log('Final payment classification:', {
+    paymentType,
+    hasOrderId: !!payment.orderId,
+    meta,
+    paymentOrderId: payment.orderId,
+    title: verification?.data?.customization?.title
+  })
 
   // Handle subscription payments
   if (paymentType === 'subscription' && !payment.orderId) {
@@ -187,10 +215,23 @@ async function processPaychanguTransaction(txRef: string) {
     })
     
     console.log('Products activated for seller:', seller.id)
+
+    // Send subscription activation email to seller
+    const sellerUser = await prisma.user.findUnique({
+      where: { id: seller.userId }
+    })
+    
+    if (sellerUser?.email) {
+      await emailService.sendPaymentConfirmationEmail(sellerUser.email, {
+        amount: payment.amount,
+        transactionId: payment.transactionId || '',
+        paymentMethod: 'PAYCHANGU'
+      }).catch(err => console.warn('Subscription confirmation email failed:', err))
+    }
   }
 
   // Handle product order payments
-  if (paymentType === 'product_order' || payment.orderId) {
+  if (paymentType === 'product_order') {
     console.log('=== PROCESSING PRODUCT ORDER PAYMENT ===')
     const orderId: string | undefined = payment.orderId || meta.orderId || meta.order_id
     
@@ -289,6 +330,21 @@ async function processPaychanguTransaction(txRef: string) {
       reference: payment.transactionId || undefined
     })
 
+    // Send payment confirmation email to buyer
+    const buyerWithUser = await prisma.buyer.findUnique({
+      where: { userId: payment.userId },
+      include: { user: true }
+    })
+    
+    if (buyerWithUser?.user?.email) {
+      await emailService.sendPaymentConfirmationEmail(buyerWithUser.user.email, {
+        amount: order.totalAmount,
+        transactionId: payment.transactionId || '',
+        orderNumber: order.orderNumber,
+        paymentMethod: 'PAYCHANGU'
+      }).catch(err => console.warn('Payment confirmation email failed:', err))
+    }
+
     // Calculate and add seller earnings
     const platformCommission = order.discountAmount || 0 // Commission stored as discount
     const sellerEarnings = order.subtotal - platformCommission
@@ -365,30 +421,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${failureRedirect}&reason=missing_ref`)
     }
 
-    // Check if this is an order payment
-    const payment = await prisma.payment.findFirst({ where: { transactionId: txRef } })
-    console.log('Found payment:', payment ? {
-      id: payment.id,
-      status: payment.status,
-      orderId: payment.orderId,
-      subscriptionId: payment.subscriptionId,
-      amount: payment.amount
-    } : 'NOT FOUND')
-    
-    const isOrderPayment = payment?.orderId ? true : false
-    console.log('Is order payment:', isOrderPayment)
-
     const result = await processPaychanguTransaction(txRef)
     console.log('Transaction processed:', result.success)
     
-    // Redirect based on payment type
-    const redirectUrl = isOrderPayment 
-      ? (result.success && result.orderId ? getOrderRedirectUrl(result.orderId) : orderFailureRedirect)
-      : (result.success ? successRedirect : failureRedirect)
+    // Check if this was an order payment by looking at the payment record
+    const payment = await prisma.payment.findFirst({ where: { transactionId: txRef } })
+    const isOrderPayment = payment?.orderId ? true : false
     
-    console.log('Redirecting to:', redirectUrl)
-    console.log('=== PAYCHANGU CALLBACK COMPLETED ===')
-    return NextResponse.redirect(redirectUrl)
+    console.log('Payment classification check:', {
+      txRef,
+      hasOrderId: !!payment?.orderId,
+      orderId: payment?.orderId,
+      isOrderPayment
+    })
+    
+    // Redirect based on payment type
+    if (isOrderPayment) {
+      if (result.success && result.orderId) {
+        console.log('Order payment successful, order ID:', result.orderId)
+        console.log('Order ID type:', typeof result.orderId)
+        console.log('Order ID length:', result.orderId.length)
+        const redirectUrl = getOrderRedirectUrl(result.orderId)
+        console.log('Final redirect URL:', redirectUrl)
+        return NextResponse.redirect(redirectUrl)
+      } else {
+        console.log('Order payment failed or missing order ID')
+        return NextResponse.redirect(orderFailureRedirect)
+      }
+    } else {
+      // Subscription payment
+      console.log('Subscription payment, redirecting to:', result.success ? successRedirect : failureRedirect)
+      return NextResponse.redirect(result.success ? successRedirect : failureRedirect)
+    }
   } catch (error) {
     console.error('=== PAYCHANGU CALLBACK ERROR ===')
     console.error('PayChangu callback GET error:', error)

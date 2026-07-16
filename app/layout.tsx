@@ -3,7 +3,21 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Inter_Tight, JetBrains_Mono, Poppins } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Providers } from '@/components/providers'
+import { PerformanceMonitor } from '@/components/ui/performance-monitor'
 import './globals.css'
+
+// Service worker registration
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('[SW] Service worker registered:', registration)
+      })
+      .catch((error) => {
+        console.error('[SW] Service worker registration failed:', error)
+      })
+  })
+}
 
 // Professional font setup with multiple weights
 const inter = Inter({ 
@@ -82,6 +96,7 @@ export default function RootLayout({
       <body className="font-inter antialiased">
         <Providers>
           {children}
+          <PerformanceMonitor />
         </Providers>
         <Analytics />
       </body>

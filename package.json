@@ -7,13 +7,16 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
-    "tunnel": "node scripts/setup-tunnel.js"
+    "tunnel": "node scripts/setup-tunnel.js",
+    "analyze": "node scripts/analyze-bundle.js",
+    "build:analyze": "ANALYZE=true npm run build"
   },
   "prisma": {
     "seed": "npx ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "2.11.1",
+    "styled-jsx": "^5.1.6",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "5.22.0",
     "@radix-ui/react-accordion": "1.2.2",
@@ -58,7 +61,7 @@
     "jspdf": "^4.1.0",
     "lucide-react": "^0.454.0",
     "next": "16.0.10",
-    "next-auth": "5.0.0-beta.21",
+    "next-auth": "5.0.0-beta.30",
     "next-themes": "^0.4.6",
     "nodemailer": "latest",
     "path": "0.12.7",
@@ -79,6 +82,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
     "@types/node": "^22",
+    "@types/nodemailer": "^7.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "postcss": "^8.5",

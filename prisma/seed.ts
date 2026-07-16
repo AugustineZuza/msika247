@@ -38,6 +38,19 @@ async function main() {
   })
 
   // Create subscription plans
+  const freePlan = await prisma.subscriptionPlan.create({
+    data: {
+      name: 'FREE',
+      description: 'Free trial plan for new sellers',
+      monthlyPrice: 0,
+      maxProducts: 5,
+      maxOrders: 10,
+      features: JSON.stringify(['Basic listing', 'Email support']),
+      isActive: true,
+      sortOrder: 0,
+    },
+  })
+
   const basicPlan = await prisma.subscriptionPlan.create({
     data: {
       name: 'Basic',
@@ -104,7 +117,7 @@ async function main() {
   await prisma.subscription.create({
     data: {
       sellerId: sellerProfile.id,
-      planId: basicPlan.id,
+      planId: freePlan.id,
       status: 'ACTIVE',
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     },

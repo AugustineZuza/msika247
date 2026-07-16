@@ -65,10 +65,29 @@ export default function InventoryManagement() {
     try {
       setLoading(true)
       const response = await fetch('/api/seller/products')
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('API Error:', errorData)
+        setProducts([])
+        return
+      }
+      
       const data = await response.json()
-      setProducts(data)
+      console.log('Products API response:', data)
+      
+      // Handle different response formats
+      if (data.products && Array.isArray(data.products)) {
+        setProducts(data.products)
+      } else if (Array.isArray(data)) {
+        setProducts(data)
+      } else {
+        console.error('Unexpected response format:', data)
+        setProducts([])
+      }
     } catch (error) {
       console.error('Failed to fetch products:', error)
+      setProducts([])
     } finally {
       setLoading(false)
     }
@@ -128,7 +147,10 @@ export default function InventoryManagement() {
     }
   }
 
-  const filteredProducts = products.filter(product => {
+  // Safety check - ensure products is always an array
+  const productsArray = Array.isArray(products) ? products : []
+  
+  const filteredProducts = productsArray.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === 'all' || product.status === filterStatus
@@ -137,13 +159,13 @@ export default function InventoryManagement() {
     return matchesSearch && matchesStatus && matchesCategory
   })
 
-  const lowStockProducts = products.filter(product => 
+  const lowStockProducts = productsArray.filter(product => 
     product.stock <= product.lowStockThreshold && product.stock > 0
   )
 
-  const outOfStockProducts = products.filter(product => product.stock === 0)
+  const outOfStockProducts = productsArray.filter(product => product.stock === 0)
 
-  const totalValue = products.reduce((sum, product) => sum + (product.price * product.stock), 0)
+  const totalValue = productsArray.reduce((sum, product) => sum + (product.price * product.stock), 0)
 
   if (!session?.user) {
     return null

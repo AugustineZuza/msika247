@@ -43,15 +43,21 @@ export function ActiveSubscriptionGuard({ children }: { children: React.ReactNod
     async function verifySubscription() {
       setStatus('checking')
       try {
+        console.log('Verifying subscription for path:', pathname)
         const response = await fetch('/api/seller/stats?scope=subscription', {
           cache: 'no-store',
         })
 
+        console.log('Subscription verification response status:', response.status)
+        
         if (!response.ok) {
-          throw new Error('Unable to verify subscription')
+          const errorText = await response.text()
+          console.error('Subscription verification failed:', response.status, errorText)
+          throw new Error(`Unable to verify subscription: ${response.status} ${errorText}`)
         }
 
         const data = (await response.json()) as SellerStatsResponse
+        console.log('Subscription data:', data)
         const isActive = isSubscriptionActive(data.subscription)
 
         if (!isActive) {

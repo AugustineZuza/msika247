@@ -43,7 +43,15 @@ export async function GET(request: NextRequest) {
     // Get products with pagination
     const products = await prisma.product.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        price: true,
+        discountPrice: true,
+        stock: true,
+        images: true,
         category: {
           select: {
             id: true,
@@ -61,7 +69,17 @@ export async function GET(request: NextRequest) {
           select: {
             reviews: true
           }
-        }
+        },
+        // Type assertion for new location fields
+        ...(true as any) && {
+          locationCity: true,
+          locationDistrict: true,
+          locationRegion: true,
+          locationAddress: true,
+        },
+        courierAvailable: true,
+        courierPrice: true,
+        createdAt: true
       },
       orderBy,
       skip: (page - 1) * limit,
@@ -70,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate average rating for each product
     const productsWithRatings = await Promise.all(
-      products.map(async (product) => {
+      products.map(async (product: any) => {
         const reviews = await prisma.review.findMany({
           where: { 
             productId: product.id,
@@ -99,7 +117,13 @@ export async function GET(request: NextRequest) {
           isActive: product.isActive,
           courierAvailable: product.courierAvailable,
           courierPrice: product.courierPrice,
-          createdAt: product.createdAt.toISOString()
+          createdAt: product.createdAt.toISOString(),
+          location: product.locationCity || product.locationDistrict || product.locationRegion ? {
+            city: product.locationCity,
+            district: product.locationDistrict,
+            region: product.locationRegion,
+            address: product.locationAddress
+          } : null
         }
       })
     )

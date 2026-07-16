@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Header } from '@/components/header'
 import Link from 'next/link'
-import { BarChart3, Users, ShoppingBag, CreditCard, TrendingUp, Settings } from 'lucide-react'
+import { BarChart3, Users, ShoppingBag, CreditCard, TrendingUp, Settings, ImageIcon } from 'lucide-react'
 
 interface Stats {
   revenue: { total: number; thisMonth: number }
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Management Section */}
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="space-y-3 pb-6">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -176,6 +176,25 @@ export default function AdminDashboard() {
               <Link href="/admin/analytics" className="block">
                 <Button className="w-full bg-primary hover:bg-primary/90">
                   View Analytics
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="space-y-3 pb-6">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ImageIcon className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Banner Management</CardTitle>
+                <CardDescription>Create and manage landing page banners</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin/banners" className="block">
+                <Button className="w-full bg-primary hover:bg-primary/90">
+                  Manage Banners
                 </Button>
               </Link>
             </CardContent>

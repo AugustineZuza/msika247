@@ -27,6 +27,8 @@ import {
   ShoppingBag,
   DollarSign
 } from 'lucide-react'
+import { WishlistWidget } from '@/components/ui/wishlist-widget'
+import { CompareWidget } from '@/components/ui/compare-button'
 
 // Malawi-inspired color palette
 const colors = {
@@ -65,11 +67,22 @@ interface Chat {
   updatedAt: string
 }
 
+interface WishlistStats {
+  totalItems: number
+  totalLists: number
+  notifications: number
+}
+
 export default function BuyerDashboard() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState('overview')
   const [orders, setOrders] = useState<Order[]>([])
   const [chats, setChats] = useState<Chat[]>([])
+  const [wishlistStats, setWishlistStats] = useState<WishlistStats>({
+    totalItems: 0,
+    totalLists: 0,
+    notifications: 0
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -82,7 +95,7 @@ export default function BuyerDashboard() {
     try {
       setLoading(true)
       
-      // Mock data - replace with actual API calls
+      // Mock orders and chats data - replace with actual API calls
       const mockOrders: Order[] = [
         {
           id: 'order-1',
@@ -115,8 +128,29 @@ export default function BuyerDashboard() {
         }
       ]
 
+      // Fetch real wishlist data
+      let wishlistData = { totalItems: 0, totalLists: 0, notifications: 0 }
+      try {
+        const wishlistResponse = await fetch('/api/buyer/wishlists')
+        if (wishlistResponse.ok) {
+          const wishlistResult = await wishlistResponse.json()
+          const wishlists = wishlistResult.wishlists || []
+          wishlistData.totalLists = wishlists.length
+          wishlistData.totalItems = wishlists.reduce((total: number, w: any) => total + w.itemCount, 0)
+        }
+
+        const notificationsResponse = await fetch('/api/buyer/wishlists/notifications')
+        if (notificationsResponse.ok) {
+          const notificationsResult = await notificationsResponse.json()
+          wishlistData.notifications = notificationsResult.total || 0
+        }
+      } catch (error) {
+        console.error('Failed to fetch wishlist data:', error)
+      }
+
       setOrders(mockOrders)
       setChats(mockChats)
+      setWishlistStats(wishlistData)
     } catch (error) {
       console.error('Dashboard data fetch error:', error)
     } finally {
@@ -185,20 +219,26 @@ export default function BuyerDashboard() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <Button variant="ghost" size="sm" className="relative">
-                  <Bell className="w-5 h-5 text-gray-600" />
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#F97316] text-white text-xs rounded-full flex items-center justify-center">
-                    3
-                  </span>
-                </Button>
-              </div>
-              
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-[#2563EB] rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-sm font-medium text-gray-900">{session?.user?.name}</span>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Link href="/buyer/profile" className="font-medium text-sm transition-colors" style={{ color: colors.primary }}>
+                  My Profile
+                </Link>
+                
+                <div className="relative">
+                  <Button variant="ghost" size="sm" className="relative">
+                    <Bell className="w-5 h-5 text-gray-600" />
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#F97316] text-white text-xs rounded-full flex items-center justify-center">
+                      3
+                    </span>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -208,16 +248,42 @@ export default function BuyerDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {session?.user?.name}! 👋
-          </h1>
-          <p className="text-gray-600">
-            Manage your orders, chat with sellers, and discover amazing products.
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Welcome back, {session?.user?.name}! 👋
+              </h1>
+              <p className="text-gray-600">
+                Manage your orders, chat with sellers, and discover amazing products.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Link href="/buyer/profile">
+                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                  <User className="w-4 h-4 mr-2" />
+                  Manage Profile
+                </Button>
+              </Link>
+              <Link href="/buyer/profile">
+                <Button variant="outline" className="border-indigo-600 text-indigo-600 hover:bg-indigo-50">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Profile Settings
+                </Button>
+              </Link>
+            </div>
+          </div>
+          
+          {/* Debug Info - Remove in production */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Debug:</strong> Profile links should be visible above. 
+              If you don't see them, try refreshing the page or check browser console for errors.
+            </p>
+          </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <Card className="bg-white border-0 shadow-lg rounded-2xl">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -244,16 +310,25 @@ export default function BuyerDashboard() {
             </Link>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <Heart className="w-6 h-6 text-[#22C55E]" />
+          <Card className="bg-white border-0 shadow-lg rounded-2xl hover:shadow-lg transition-shadow cursor-pointer">
+            <Link href="/my-wishlist" className="block">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                    <Heart className="w-6 h-6 text-[#22C55E]" />
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-gray-900">{wishlistStats.totalItems}</span>
+                    {wishlistStats.notifications > 0 && (
+                      <div className="text-xs bg-red-500 text-white rounded-full px-2 py-1 mt-1 inline-block">
+                        {wishlistStats.notifications} alerts
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <span className="text-2xl font-bold text-gray-900">24</span>
-              </div>
-              <p className="text-sm text-gray-600">Wishlist Items</p>
-            </CardContent>
+                <p className="text-sm text-gray-600">Wishlist Items</p>
+              </CardContent>
+            </Link>
           </Card>
 
           <Card className="bg-white border-0 shadow-lg rounded-2xl">
@@ -267,10 +342,24 @@ export default function BuyerDashboard() {
               <p className="text-sm text-gray-600">Total Spent</p>
             </CardContent>
           </Card>
+
+          <Card className="bg-white border-0 shadow-lg rounded-2xl hover:shadow-lg transition-shadow cursor-pointer">
+            <Link href="/buyer/profile" className="block">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+                    <User className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <Settings className="w-5 h-5 text-indigo-600" />
+                </div>
+                <p className="text-sm text-gray-600">My Profile</p>
+              </CardContent>
+            </Link>
+          </Card>
         </div>
 
-        {/* Recent Orders & Active Chats */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Recent Orders, Active Chats, Wishlist & Compare */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Recent Orders */}
           <Card className="bg-white border-0 shadow-lg rounded-2xl">
             <CardContent className="p-6">
@@ -367,22 +456,39 @@ export default function BuyerDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Wishlist Widget */}
+          <WishlistWidget />
+
+          {/* Compare Widget */}
+          <CompareWidget />
         </div>
 
         {/* Quick Actions */}
         <div className="mt-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Link href="/shop">
               <Button className="w-full h-16 bg-[#2563EB] hover:bg-[#2563EB]/90 text-white rounded-xl font-medium transition-colors">
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 Browse Shop
               </Button>
             </Link>
-            <Link href="/buyer/wishlist">
+            <Link href="/my-wishlist">
               <Button variant="outline" className="w-full h-16 border-2 border-gray-300 hover:border-[#2563EB] text-gray-700 hover:text-[#2563EB] rounded-xl font-medium transition-colors">
                 <Heart className="w-5 h-5 mr-2" />
                 Wishlist
+              </Button>
+            </Link>
+            <Link href="/buyer/wishlist-notifications">
+              <Button variant="outline" className="w-full h-16 border-2 border-gray-300 hover:border-red-500 text-gray-700 hover:text-red-600 rounded-xl font-medium transition-colors relative">
+                <Bell className="w-5 h-5 mr-2" />
+                Alerts
+                {wishlistStats.notifications > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {wishlistStats.notifications}
+                  </span>
+                )}
               </Button>
             </Link>
             <Link href="/buyer/messages">

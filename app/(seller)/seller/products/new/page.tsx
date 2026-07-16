@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { ArrowLeft, Plus, X } from 'lucide-react'
+import { ArrowLeft, Plus, X, MapPin } from 'lucide-react'
 
 interface Category {
   id: string
@@ -45,7 +45,14 @@ export default function NewProductPage() {
     images: [] as string[],
     tags: [] as string[],
     courierAvailable: false,
-    courierPrice: ''
+    courierPrice: '',
+    location: {
+      city: '',
+      district: '',
+      region: '',
+      address: '',
+      coordinates: null
+    }
   })
   
   const [newTag, setNewTag] = useState('')
@@ -88,7 +95,8 @@ export default function NewProductPage() {
         condition: formData.condition,
         isActive: formData.isActive,
         courierAvailable: formData.courierAvailable,
-        ...(formData.courierPrice && { courierPrice: parseFloat(formData.courierPrice) })
+        ...(formData.courierPrice && { courierPrice: parseFloat(formData.courierPrice) }),
+        location: formData.location
       }
 
       console.log('Sending payload:', payload)
@@ -470,6 +478,93 @@ export default function NewProductPage() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Product Location */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Product Location</CardTitle>
+            <CardDescription>Help buyers find where your product is located</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">City *</Label>
+                <Input
+                  id="city"
+                  value={formData.location.city}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    location: { ...prev.location, city: e.target.value }
+                  }))}
+                  placeholder="e.g., Lilongwe"
+                  required
+                  disabled={isLoading}
+                  className="border-green-500 focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="district">District *</Label>
+                <Input
+                  id="district"
+                  value={formData.location.district}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    location: { ...prev.location, district: e.target.value }
+                  }))}
+                  placeholder="e.g., Lilongwe District"
+                  required
+                  disabled={isLoading}
+                  className="border-green-500 focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="region">Region *</Label>
+                <Select value={formData.location.region} onValueChange={(value) => setFormData(prev => ({ 
+                  ...prev, 
+                  location: { ...prev.location, region: value }
+                }))}>
+                  <SelectTrigger className="border-green-500 focus:border-green-600 focus:ring-green-600">
+                    <SelectValue placeholder="Select region" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Northern">Northern Region</SelectItem>
+                    <SelectItem value="Central">Central Region</SelectItem>
+                    <SelectItem value="Southern">Southern Region</SelectItem>
+                    <SelectItem value="Eastern">Eastern Region</SelectItem>
+                    <SelectItem value="Western">Western Region</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Physical Address</Label>
+                <Input
+                  id="address"
+                  value={formData.location.address}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    location: { ...prev.location, address: e.target.value }
+                  }))}
+                  placeholder="Shop address or pickup location"
+                  disabled={isLoading}
+                  className="border-green-500 focus:border-green-600 focus:ring-green-600"
+                />
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-blue-800">Location Information</p>
+                  <p className="text-blue-600">This location will be displayed to buyers so they know where your product is located. This helps with local pickup and delivery planning.</p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

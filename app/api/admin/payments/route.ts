@@ -95,106 +95,64 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get payments from subscriptions and orders
-    const [subscriptionPayments, orderPayments] = await Promise.all([
-      // Subscription payments (when paymentType is 'subscription' or 'all')
-      prisma.payment.findMany({
-        where: paymentType === 'order' ? { ...whereClause, subscriptionId: { not: null } } : whereClause,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          },
-          subscription: {
-            include: {
-              seller: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true
-                    }
-                  }
-                }
+    // Get all payments with proper filtering
+    const payments = await prisma.payment.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        subscription: {
+          include: {
+            seller: {
+              select: {
+                businessName: true
+              }
+            },
+            plan: {
+              select: {
+                name: true
               }
             }
           }
         },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      }),
-      // Order payments (when paymentType is 'order' or 'all')
-      prisma.payment.findMany({
-        where: paymentType === 'subscription' ? { ...whereClause, orderId: { not: null } } : whereClause,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          },
-          order: {
-            include: {
-              buyer: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true
-                    }
-                  }
-                }
-              }
-            }
+        order: {
+          select: {
+            orderNumber: true
           }
-        },
-        orderBy: {
-          createdAt: 'desc'
         }
-      })
-    ])
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip,
+      take: limit
+    })
 
-    // Format subscription payments
-    const formattedSubscriptionPayments = subscriptionPayments.map((payment) => ({
-      id: payment.id,
-      type: 'SUBSCRIPTION' as const,
-      amount: payment.amount,
-      status: payment.status,
-      paymentMethod: payment.paymentMethod || 'Unknown',
-      createdAt: payment.createdAt.toISOString(),
-      user: payment.user,
-      relatedEntity: {
-        id: payment.subscriptionId || '',
-        plan: payment.subscription?.seller.businessName || 'Unknown'
+    // Format payments based on their actual relationships
+    const formattedPayments = payments.map((payment) => {
+      const isSubscription = !!payment.subscriptionId
+      const isOrder = !!payment.orderId
+      
+      return {
+        id: payment.id,
+        type: isSubscription ? 'SUBSCRIPTION' as const : 'ORDER' as const,
+        amount: payment.amount,
+        status: payment.status,
+        paymentMethod: payment.paymentMethod || 'Unknown',
+        createdAt: payment.createdAt.toISOString(),
+        user: payment.user,
+        relatedEntity: {
+          id: isSubscription ? payment.subscriptionId || '' : payment.orderId || '',
+          plan: isSubscription ? payment.subscription?.plan?.name || 'Unknown' : undefined,
+          orderNumber: isOrder ? payment.order?.orderNumber || 'Unknown' : undefined
+        }
       }
-    }))
-
-    // Format order payments
-    const formattedOrderPayments = orderPayments.map((payment) => ({
-      id: payment.id,
-      type: 'ORDER' as const,
-      amount: payment.amount,
-      status: payment.status,
-      paymentMethod: payment.paymentMethod || 'Unknown',
-      createdAt: payment.createdAt.toISOString(),
-      user: payment.user,
-      relatedEntity: {
-        id: payment.orderId || '',
-        orderNumber: payment.order?.orderNumber || 'Unknown'
-      }
-    }))
-
-    // Combine and sort all payments, ensuring unique keys
-    const allPayments = [...formattedSubscriptionPayments, ...formattedOrderPayments]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(skip, skip + limit)
+    })
       .map((payment, index) => ({
         ...payment,
         // Ensure unique key by combining type and id if needed
@@ -205,23 +163,19 @@ export async function GET(request: NextRequest) {
 
     // Calculate stats
     const stats = {
-      totalRevenue: allPayments.reduce((sum, p) => sum + p.amount, 0),
-      subscriptionRevenue: formattedSubscriptionPayments.reduce((sum, p) => sum + p.amount, 0),
-      orderRevenue: formattedOrderPayments.reduce((sum, p) => sum + p.amount, 0),
-      totalPayments: allPayments.length,
-      successfulPayments: allPayments.filter(p => p.status === 'SUCCESS').length,
-      failedPayments: allPayments.filter(p => p.status === 'FAILED').length,
-      pendingPayments: allPayments.filter(p => p.status === 'PENDING').length
+      totalRevenue: formattedPayments.reduce((sum, p) => sum + p.amount, 0),
+      subscriptionRevenue: formattedPayments.filter(p => p.type === 'SUBSCRIPTION').reduce((sum, p) => sum + p.amount, 0),
+      orderRevenue: formattedPayments.filter(p => p.type === 'ORDER').reduce((sum, p) => sum + p.amount, 0)
     }
 
     return NextResponse.json({
-      payments: allPayments,
+      payments: formattedPayments,
       stats,
       pagination: {
         page,
         limit,
-        total: allPayments.length,
-        pages: Math.ceil(allPayments.length / limit)
+        total: formattedPayments.length,
+        pages: Math.ceil(formattedPayments.length / limit)
       }
     })
 
