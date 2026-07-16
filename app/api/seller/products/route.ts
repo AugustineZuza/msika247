@@ -202,11 +202,37 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!name || !price || !categoryId || !stock) {
+      console.error('Missing required fields:', { name, price, categoryId, stock })
       return NextResponse.json(
         { error: 'Name, price, category, and stock are required' },
         { status: 400 }
       )
     }
+
+    // Validate data types
+    if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      console.error('Invalid price:', price)
+      return NextResponse.json(
+        { error: 'Valid price is required' },
+        { status: 400 }
+      )
+    }
+
+    if (isNaN(parseInt(stock)) || parseInt(stock) < 0) {
+      console.error('Invalid stock:', stock)
+      return NextResponse.json(
+        { error: 'Valid stock quantity is required' },
+        { status: 400 }
+      )
+    }
+
+    console.log('Creating product with data:', {
+      name,
+      price: parseFloat(price),
+      categoryId,
+      stock: parseInt(stock),
+      sellerId: seller.id
+    })
 
     // Check if SKU already exists (if provided)
     if (sku) {
@@ -275,8 +301,20 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
   } catch (error) {
     console.error('Create product error:', error)
+    
+    // Log more detailed error information
+    if (error instanceof Error) {
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
+    
+    // Return more detailed error info
     return NextResponse.json(
-      { error: 'Failed to create product' },
+      { 
+        error: 'Failed to create product',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        code: 'PRODUCT_CREATION_FAILED'
+      },
       { status: 500 }
     )
   }

@@ -683,3 +683,22 @@ model PayoutRequest {
   @@index([status])
   @@index([createdAt])
 }
+
+// Banner model for homepage carousel
+model Banner {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  image       String?  // URL to banner image
+  ctaText     String   // Call-to-action button text
+  ctaLink     String   // Call-to-action button link
+  bgColor     String   @default("#006B3F")  // Background color
+  textColor    String   @default("#FFFFFF")  // Text color
+  order       Int      @default(0)  // Display order
+  isActive     Boolean  @default(true)  // Whether banner is active
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([order])
+  @@index([isActive])
+}

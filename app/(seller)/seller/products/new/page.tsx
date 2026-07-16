@@ -21,6 +21,8 @@ import { ArrowLeft, Plus, X } from 'lucide-react'
 interface Category {
   id: string
   name: string
+  icon?: any
+  color?: string
 }
 
 export default function NewProductPage() {
@@ -89,6 +91,8 @@ export default function NewProductPage() {
         ...(formData.courierPrice && { courierPrice: parseFloat(formData.courierPrice) })
       }
 
+      console.log('Sending payload:', payload)
+
       const response = await fetch('/api/seller/products', {
         method: 'POST',
         headers: {
@@ -100,6 +104,7 @@ export default function NewProductPage() {
       const data = await response.json()
 
       if (!response.ok) {
+        console.error('API Error Response:', data)
         throw new Error(data?.error || 'Failed to create product')
       }
 
