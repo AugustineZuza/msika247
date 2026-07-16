@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
             name: true
           }
         },
-        reviews: {
+        review: {
           select: {
             rating: true
           }
@@ -46,17 +46,25 @@ export async function GET(request: NextRequest) {
     
     // Calculate ratings and format response
     const formattedProducts = products.map(product => {
-      const reviews = product.reviews || []
+      const reviews = product.review || []
       const averageRating = reviews.length > 0 
         ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
         : 0
+      
+      // Parse images from JSON string
+      let images = []
+      try {
+        images = product.images ? JSON.parse(product.images) : []
+      } catch {
+        images = []
+      }
       
       return {
         id: product.id,
         name: product.name,
         price: product.price,
         discountPrice: product.discountPrice,
-        images: product.images,
+        images,
         slug: product.slug,
         seller: product.seller,
         category: product.category.name,

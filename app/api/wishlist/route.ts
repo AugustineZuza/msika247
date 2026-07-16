@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
                 name: true
               }
             },
-            reviews: {
+            review: {
               select: {
                 rating: true,
                 comment: true
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
 
     // Format the response to match expected structure
     const formattedItems = wishlistItems.map(item => {
-      const reviews = item.product.reviews || []
+      const reviews = item.product.review || []
       const averageRating = reviews.length > 0 
         ? reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / reviews.length 
         : 0
@@ -329,7 +329,7 @@ export async function POST(request: NextRequest) {
                 name: true
               }
             },
-            reviews: {
+            review: {
               select: {
                 rating: true,
                 comment: true

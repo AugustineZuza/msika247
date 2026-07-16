@@ -34,7 +34,7 @@ export async function GET(
             businessName: true,
           }
         },
-        reviews: {
+        review: {
           select: {
             rating: true,
           }
@@ -50,8 +50,8 @@ export async function GET(
     }
 
     // Calculate average rating
-    const averageRating = product.reviews.length > 0 
-      ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+    const averageRating = product.review.length > 0 
+      ? product.review.reduce((sum, review) => sum + review.rating, 0) / product.review.length
       : 0
 
     // Parse images JSON
@@ -71,7 +71,7 @@ export async function GET(
       courierAvailable: product.courierAvailable,
       courierPrice: product.courierPrice,
       averageRating: parseFloat(averageRating.toFixed(1)),
-      reviewCount: product.reviews.length,
+      reviewCount: product.review.length,
       isActive: product.isActive,
       createdAt: product.createdAt.toISOString(),
     }

@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
             name: true
           }
         },
-        reviews: {
+        review: {
           select: {
             rating: true
           }
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     // Format products with ratings
     const formattedProducts = products.map(product => {
-      const reviews = product.reviews || []
+      const reviews = product.review || []
       const averageRating = reviews.length > 0 
         ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
         : 0
