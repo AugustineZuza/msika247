@@ -6,11 +6,11 @@ import { prisma } from '@/lib/prisma'
 // GET /api/buyer/wishlists/[id] - Get a specific wishlist
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(auth)
-    const { id } = params
+    const { id } = await params
 
     if (!session || !(session as any).user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -105,11 +105,11 @@ export async function GET(
 // PUT /api/buyer/wishlists/[id] - Update a wishlist
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(auth)
-    const { id } = params
+    const { id } = await params
 
     if (!session || !(session as any).user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -164,11 +164,11 @@ export async function PUT(
 // DELETE /api/buyer/wishlists/[id] - Delete a wishlist
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(auth)
-    const { id } = params
+    const { id } = await params
 
     if (!session || !(session as any).user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
